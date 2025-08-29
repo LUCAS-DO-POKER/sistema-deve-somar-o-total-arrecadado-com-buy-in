@@ -11,6 +11,14 @@ export interface Player {
   totalSpent: number;
 }
 
+export interface CashGamePlayer {
+  id: string;
+  name: string;
+  amountSpent: number;
+  timeIn: number; // em minutos
+  isActive: boolean;
+}
+
 export interface BlindLevel {
   level: number;
   smallBlind: number;
@@ -25,11 +33,19 @@ export interface PrizeStructure {
 }
 
 export interface TournamentState {
+  // Modo de jogo
+  gameMode: 'tournament' | 'cashgame';
+  
   // Timer
   currentLevel: number;
   timeRemaining: number; // em segundos
   isRunning: boolean;
   isPaused: boolean;
+  
+  // Cash Game
+  cashGameTime: number; // tempo total em segundos
+  cashGameEntryFee: number;
+  cashGamePlayers: CashGamePlayer[];
   
   // Configurações
   blindLevels: BlindLevel[];
@@ -51,11 +67,19 @@ export interface TournamentState {
 }
 
 type TournamentAction =
+  | { type: 'SET_GAME_MODE'; payload: 'tournament' | 'cashgame' }
   | { type: 'START_TIMER' }
   | { type: 'PAUSE_TIMER' }
   | { type: 'RESUME_TIMER' }
   | { type: 'RESET_TIMER' }
   | { type: 'TICK' }
+  | { type: 'CASH_GAME_TICK' }
+  | { type: 'RESET_CASH_GAME_TIMER' }
+  | { type: 'SET_CASH_GAME_ENTRY_FEE'; payload: number }
+  | { type: 'ADD_CASH_GAME_PLAYER'; payload: Omit<CashGamePlayer, 'id' | 'timeIn' | 'isActive'> }
+  | { type: 'UPDATE_CASH_GAME_PLAYER'; payload: CashGamePlayer }
+  | { type: 'REMOVE_CASH_GAME_PLAYER'; payload: string }
+  | { type: 'TOGGLE_CASH_GAME_PLAYER_STATUS'; payload: string }
   | { type: 'NEXT_LEVEL' }
   | { type: 'PREVIOUS_LEVEL' }
   | { type: 'SET_LEVEL'; payload: number }
@@ -91,10 +115,14 @@ const initialPrizeStructure: PrizeStructure[] = [
 ];
 
 const initialState: TournamentState = {
+  gameMode: 'tournament',
   currentLevel: 0,
   timeRemaining: 15 * 60, // 15 minutos em segundos
   isRunning: false,
   isPaused: false,
+  cashGameTime: 0,
+  cashGameEntryFee: 100,
+  cashGamePlayers: [],
   blindLevels: initialBlindLevels,
   defaultDuration: 15,
   buyInAmount: 100,
@@ -113,6 +141,14 @@ function calculatePlayerTotal(player: Omit<Player, 'totalSpent'>, buyInAmount: n
 
 function tournamentReducer(state: TournamentState, action: TournamentAction): TournamentState {
   switch (action.type) {
+    case 'SET_GAME_MODE':
+      return { 
+        ...state, 
+        gameMode: action.payload,
+        isRunning: false,
+        isPaused: false,
+      };
+    
     case 'START_TIMER':
       return { ...state, isRunning: true, isPaused: false };
     
@@ -134,6 +170,64 @@ function tournamentReducer(state: TournamentState, action: TournamentAction): To
     case 'TICK':
       if (!state.isRunning || state.timeRemaining <= 0) return state;
       return { ...state, timeRemaining: state.timeRemaining - 1 };
+    
+    case 'CASH_GAME_TICK':
+      if (!state.isRunning) return state;
+      const updatedCashGamePlayers = state.cashGamePlayers.map(player => 
+        player.isActive 
+          ? { ...player, timeIn: player.timeIn + (1/60) } // Adiciona 1 segundo convertido para minutos
+          : player
+      );
+      return { 
+        ...state, 
+        cashGameTime: state.cashGameTime + 1,
+        cashGamePlayers: updatedCashGamePlayers
+      };
+    
+    case 'RESET_CASH_GAME_TIMER':
+      return {
+        ...state,
+        cashGameTime: 0,
+        isRunning: false,
+        isPaused: false,
+        cashGamePlayers: state.cashGamePlayers.map(player => ({
+          ...player,
+          timeIn: 0,
+          isActive: false
+        }))
+      };
+    
+    case 'SET_CASH_GAME_ENTRY_FEE':
+      return { ...state, cashGameEntryFee: action.payload };
+    
+    case 'ADD_CASH_GAME_PLAYER':
+      const newCashGamePlayer: CashGamePlayer = {
+        ...action.payload,
+        id: Date.now().toString(),
+        timeIn: 0,
+        isActive: true,
+      };
+      return { ...state, cashGamePlayers: [...state.cashGamePlayers, newCashGamePlayer] };
+    
+    case 'UPDATE_CASH_GAME_PLAYER':
+      const updatedCashPlayers = state.cashGamePlayers.map(player =>
+        player.id === action.payload.id ? action.payload : player
+      );
+      return { ...state, cashGamePlayers: updatedCashPlayers };
+    
+    case 'REMOVE_CASH_GAME_PLAYER':
+      return { 
+        ...state, 
+        cashGamePlayers: state.cashGamePlayers.filter(player => player.id !== action.payload) 
+      };
+    
+    case 'TOGGLE_CASH_GAME_PLAYER_STATUS':
+      const toggledPlayers = state.cashGamePlayers.map(player =>
+        player.id === action.payload 
+          ? { ...player, isActive: !player.isActive }
+          : player
+      );
+      return { ...state, cashGamePlayers: toggledPlayers };
     
     case 'NEXT_LEVEL':
       const nextLevel = Math.min(state.currentLevel + 1, state.blindLevels.length - 1);
@@ -254,15 +348,19 @@ export function TournamentProvider({ children }: { children: React.ReactNode }) 
     if (!state.isRunning) return;
 
     const interval = setInterval(() => {
-      dispatch({ type: 'TICK' });
+      if (state.gameMode === 'tournament') {
+        dispatch({ type: 'TICK' });
+      } else {
+        dispatch({ type: 'CASH_GAME_TICK' });
+      }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [state.isRunning]);
+  }, [state.isRunning, state.gameMode]);
 
-  // Auto advance to next level when time runs out
+  // Auto advance to next level when time runs out (only for tournament)
   useEffect(() => {
-    if (state.timeRemaining === 0 && state.isRunning) {
+    if (state.gameMode === 'tournament' && state.timeRemaining === 0 && state.isRunning) {
       // Play sound if enabled
       if (state.soundEnabled) {
         const audio = new Audio('/sounds/alert.mp3');
@@ -277,7 +375,7 @@ export function TournamentProvider({ children }: { children: React.ReactNode }) 
         dispatch({ type: 'NEXT_LEVEL' });
       }, 1000);
     }
-  }, [state.timeRemaining, state.isRunning, state.soundEnabled]);
+  }, [state.timeRemaining, state.isRunning, state.soundEnabled, state.gameMode]);
 
   // Calculate prize pool when players change
   useEffect(() => {

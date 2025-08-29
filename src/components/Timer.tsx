@@ -5,9 +5,15 @@ import { useTournament } from '@/contexts/TournamentContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Play, Pause, RotateCcw, SkipForward, SkipBack, Trophy } from 'lucide-react';
+import { CashGame } from '@/components/CashGame';
 
 export function Timer() {
   const { state, dispatch } = useTournament();
+
+  // Se estiver no modo cash game, renderizar o componente CashGame
+  if (state.gameMode === 'cashgame') {
+    return <CashGame />;
+  }
 
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -37,6 +43,24 @@ export function Timer() {
 
   return (
     <div className="flex flex-col items-center space-y-6">
+      {/* Toggle entre TORNEIO e CASH GAME */}
+      <div className="flex gap-2 w-full max-w-md">
+        <Button
+          variant={state.gameMode === 'tournament' ? 'default' : 'outline'}
+          onClick={() => dispatch({ type: 'SET_GAME_MODE', payload: 'tournament' })}
+          className="flex-1"
+        >
+          TORNEIO
+        </Button>
+        <Button
+          variant={state.gameMode === 'cashgame' ? 'default' : 'outline'}
+          onClick={() => dispatch({ type: 'SET_GAME_MODE', payload: 'cashgame' })}
+          className="flex-1 bg-red-600 hover:bg-red-700 text-white border-red-600"
+        >
+          CASH GAME
+        </Button>
+      </div>
+
       {/* Cronômetro Principal com Premiação Integrada */}
       <Card className="w-full max-w-2xl">
         <CardContent className="p-8">
