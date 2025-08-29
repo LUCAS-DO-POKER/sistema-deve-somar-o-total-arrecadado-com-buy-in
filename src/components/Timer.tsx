@@ -3,7 +3,7 @@
 import React from 'react';
 import { useTournament } from '@/contexts/TournamentContext';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Play, Pause, RotateCcw, SkipForward, SkipBack, Trophy } from 'lucide-react';
 
 export function Timer() {
@@ -37,10 +37,11 @@ export function Timer() {
 
   return (
     <div className="flex flex-col items-center space-y-6">
-      {/* Cronômetro Principal */}
-      <Card className="w-full max-w-md">
-        <CardContent className="p-8 text-center">
-          <div className="space-y-4">
+      {/* Cronômetro Principal com Premiação Integrada */}
+      <Card className="w-full max-w-2xl">
+        <CardContent className="p-8">
+          {/* Cronômetro */}
+          <div className="text-center space-y-4 mb-6">
             <div className="text-sm text-muted-foreground">
               Nível {state.currentLevel + 1}
             </div>
@@ -55,10 +56,67 @@ export function Timer() {
               </div>
             )}
           </div>
+
+          {/* Seção de Premiação Integrada */}
+          {state.totalPrizePool > 0 && state.prizeStructure.length > 0 && (
+            <div className="border-2 border-yellow-400 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg p-4 mt-6">
+              <div className="flex items-center justify-center gap-2 mb-4">
+                <Trophy className="w-5 h-5 text-yellow-600" />
+                <h3 className="text-lg font-bold text-yellow-800 dark:text-yellow-200">
+                  Premiação
+                </h3>
+              </div>
+              
+              <div className="text-center mb-4">
+                <div className="text-xl font-bold text-green-600">
+                  Prize Pool: R$ {state.totalPrizePool.toFixed(2)}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {state.players.length} jogadores
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {state.prizeStructure
+                  .sort((a, b) => a.position - b.position)
+                  .slice(0, 4) // Mostrar apenas os 4 primeiros para não ocupar muito espaço
+                  .map((prize) => (
+                    <div 
+                      key={prize.position} 
+                      className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-yellow-500 text-white text-xs font-bold">
+                          {prize.position}
+                        </div>
+                        <span className="text-sm font-medium">
+                          {prize.position}{getPositionSuffix(prize.position)} Lugar
+                        </span>
+                      </div>
+                      
+                      <div className="text-right">
+                        <div className="text-sm font-bold text-green-600">
+                          R$ {calculatePrizeAmount(prize.percentage).toFixed(2)}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {prize.percentage}%
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+              
+              {state.prizeStructure.length > 4 && (
+                <div className="text-center mt-2 text-xs text-muted-foreground">
+                  +{state.prizeStructure.length - 4} posições premiadas
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Informações das Blinds */}
+      {/* Informações das Blinds com ANTE */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl">
         <Card>
           <CardContent className="p-6 text-center">
@@ -67,10 +125,13 @@ export function Timer() {
               {currentBlind ? `${currentBlind.smallBlind}/${currentBlind.bigBlind}` : 'N/A'}
             </div>
             {currentBlind?.ante && (
-              <div className="text-sm text-muted-foreground">
+              <div className="text-lg text-orange-600 font-semibold mt-1">
                 Ante: {currentBlind.ante}
               </div>
             )}
+            <div className="text-xs text-muted-foreground mt-1">
+              {currentBlind ? `${currentBlind.duration} min` : ''}
+            </div>
           </CardContent>
         </Card>
 
@@ -81,64 +142,16 @@ export function Timer() {
               {nextBlind ? `${nextBlind.smallBlind}/${nextBlind.bigBlind}` : 'Final'}
             </div>
             {nextBlind?.ante && (
-              <div className="text-sm text-muted-foreground">
+              <div className="text-lg text-orange-600 font-semibold mt-1">
                 Ante: {nextBlind.ante}
               </div>
             )}
+            <div className="text-xs text-muted-foreground mt-1">
+              {nextBlind ? `${nextBlind.duration} min` : ''}
+            </div>
           </CardContent>
         </Card>
       </div>
-
-      {/* Seção de Premiação */}
-      {state.totalPrizePool > 0 && state.prizeStructure.length > 0 && (
-        <Card className="w-full max-w-2xl">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 text-center justify-center">
-              <Trophy className="w-5 h-5 text-yellow-500" />
-              Premiação
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center mb-4">
-              <div className="text-2xl font-bold text-green-600">
-                Prize Pool: R$ {state.totalPrizePool.toFixed(2)}
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {state.players.length} jogadores
-              </div>
-            </div>
-            
-            <div className="space-y-3">
-              {state.prizeStructure
-                .sort((a, b) => a.position - b.position)
-                .map((prize) => (
-                  <div 
-                    key={prize.position} 
-                    className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-bold">
-                        {prize.position}
-                      </div>
-                      <span className="font-medium">
-                        {prize.position}{getPositionSuffix(prize.position)} Lugar
-                      </span>
-                    </div>
-                    
-                    <div className="text-right">
-                      <div className="font-bold text-green-600">
-                        R$ {calculatePrizeAmount(prize.percentage).toFixed(2)}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {prize.percentage}%
-                      </div>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Controles do Timer */}
       <div className="flex flex-wrap justify-center gap-3">
