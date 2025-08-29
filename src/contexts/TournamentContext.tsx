@@ -11,12 +11,19 @@ export interface Player {
   totalSpent: number;
 }
 
+export interface CashGamePurchase {
+  id: string;
+  amount: number;
+  timestamp: Date;
+}
+
 export interface CashGamePlayer {
   id: string;
   name: string;
   amountSpent: number;
   timeIn: number; // em minutos
   isActive: boolean;
+  purchases: CashGamePurchase[];
 }
 
 export interface BlindLevel {
@@ -33,9 +40,6 @@ export interface PrizeStructure {
 }
 
 export interface TournamentState {
-  // Modo de jogo
-  gameMode: 'tournament' | 'cashgame';
-  
   // Timer
   currentLevel: number;
   timeRemaining: number; // em segundos
@@ -67,7 +71,6 @@ export interface TournamentState {
 }
 
 type TournamentAction =
-  | { type: 'SET_GAME_MODE'; payload: 'tournament' | 'cashgame' }
   | { type: 'START_TIMER' }
   | { type: 'PAUSE_TIMER' }
   | { type: 'RESUME_TIMER' }
@@ -76,10 +79,11 @@ type TournamentAction =
   | { type: 'CASH_GAME_TICK' }
   | { type: 'RESET_CASH_GAME_TIMER' }
   | { type: 'SET_CASH_GAME_ENTRY_FEE'; payload: number }
-  | { type: 'ADD_CASH_GAME_PLAYER'; payload: Omit<CashGamePlayer, 'id' | 'timeIn' | 'isActive'> }
+  | { type: 'ADD_CASH_GAME_PLAYER'; payload: Omit<CashGamePlayer, 'id' | 'timeIn' | 'isActive' | 'purchases'> }
   | { type: 'UPDATE_CASH_GAME_PLAYER'; payload: CashGamePlayer }
   | { type: 'REMOVE_CASH_GAME_PLAYER'; payload: string }
   | { type: 'TOGGLE_CASH_GAME_PLAYER_STATUS'; payload: string }
+  | { type: 'ADD_CASH_GAME_PURCHASE'; payload: { playerId: string; amount: number } }
   | { type: 'NEXT_LEVEL' }
   | { type: 'PREVIOUS_LEVEL' }
   | { type: 'SET_LEVEL'; payload: number }
@@ -115,7 +119,6 @@ const initialPrizeStructure: PrizeStructure[] = [
 ];
 
 const initialState: TournamentState = {
-  gameMode: 'tournament',
   currentLevel: 0,
   timeRemaining: 15 * 60, // 15 minutos em segundos
   isRunning: false,
@@ -141,14 +144,6 @@ function calculatePlayerTotal(player: Omit<Player, 'totalSpent'>, buyInAmount: n
 
 function tournamentReducer(state: TournamentState, action: TournamentAction): TournamentState {
   switch (action.type) {
-    case 'SET_GAME_MODE':
-      return { 
-        ...state, 
-        gameMode: action.payload,
-        isRunning: false,
-        isPaused: false,
-      };
-    
     case 'START_TIMER':
       return { ...state, isRunning: true, isPaused: false };
     
@@ -206,6 +201,11 @@ function tournamentReducer(state: TournamentState, action: TournamentAction): To
         id: Date.now().toString(),
         timeIn: 0,
         isActive: true,
+        purchases: [{
+          id: Date.now().toString(),
+          amount: action.payload.amountSpent,
+          timestamp: new Date()
+        }]
       };
       return { ...state, cashGamePlayers: [...state.cashGamePlayers, newCashGamePlayer] };
     
@@ -228,6 +228,24 @@ function tournamentReducer(state: TournamentState, action: TournamentAction): To
           : player
       );
       return { ...state, cashGamePlayers: toggledPlayers };
+    
+    case 'ADD_CASH_GAME_PURCHASE':
+      const playersWithNewPurchase = state.cashGamePlayers.map(player => {
+        if (player.id === action.payload.playerId) {
+          const newPurchase: CashGamePurchase = {
+            id: Date.now().toString(),
+            amount: action.payload.amount,
+            timestamp: new Date()
+          };
+          return {
+            ...player,
+            amountSpent: player.amountSpent + action.payload.amount,
+            purchases: [...player.purchases, newPurchase]
+          };
+        }
+        return player;
+      });
+      return { ...state, cashGamePlayers: playersWithNewPurchase };
     
     case 'NEXT_LEVEL':
       const nextLevel = Math.min(state.currentLevel + 1, state.blindLevels.length - 1);
@@ -348,19 +366,15 @@ export function TournamentProvider({ children }: { children: React.ReactNode }) 
     if (!state.isRunning) return;
 
     const interval = setInterval(() => {
-      if (state.gameMode === 'tournament') {
-        dispatch({ type: 'TICK' });
-      } else {
-        dispatch({ type: 'CASH_GAME_TICK' });
-      }
+      dispatch({ type: 'CASH_GAME_TICK' });
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [state.isRunning, state.gameMode]);
+  }, [state.isRunning]);
 
   // Auto advance to next level when time runs out (only for tournament)
   useEffect(() => {
-    if (state.gameMode === 'tournament' && state.timeRemaining === 0 && state.isRunning) {
+    if (state.timeRemaining === 0 && state.isRunning) {
       // Play sound if enabled
       if (state.soundEnabled) {
         const audio = new Audio('/sounds/alert.mp3');
@@ -375,7 +389,7 @@ export function TournamentProvider({ children }: { children: React.ReactNode }) 
         dispatch({ type: 'NEXT_LEVEL' });
       }, 1000);
     }
-  }, [state.timeRemaining, state.isRunning, state.soundEnabled, state.gameMode]);
+  }, [state.timeRemaining, state.isRunning, state.soundEnabled]);
 
   // Calculate prize pool when players change
   useEffect(() => {
