@@ -123,42 +123,48 @@ export function Timer() {
         </CardContent>
       </Card>
 
-      {/* Informações das Blinds com ANTE */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl">
-        <Card>
-          <CardContent className="p-6 text-center">
-            <div className="text-sm text-muted-foreground mb-2">Blind Atual</div>
-            <div className="text-2xl font-bold">
+      {/* BLINDS EM DESTAQUE */}
+      <Card className="w-full max-w-2xl border-2 border-blue-500 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30">
+        <CardContent className="p-6">
+          <div className="text-center">
+            <div className="text-lg font-bold text-blue-800 dark:text-blue-200 mb-4">
+              BLINDS ATUAIS
+            </div>
+            
+            <div className="text-5xl md:text-6xl font-bold text-blue-600 dark:text-blue-400 mb-2">
               {currentBlind ? `${currentBlind.smallBlind}/${currentBlind.bigBlind}` : 'N/A'}
             </div>
+            
             {currentBlind?.ante && (
-              <div className="text-lg text-orange-600 font-semibold mt-1">
+              <div className="text-2xl md:text-3xl font-bold text-orange-500 mb-2">
                 Ante: {currentBlind.ante}
               </div>
             )}
-            <div className="text-xs text-muted-foreground mt-1">
-              {currentBlind ? `${currentBlind.duration} min` : ''}
+            
+            <div className="text-sm text-muted-foreground">
+              Duração: {currentBlind ? `${currentBlind.duration} min` : 'N/A'}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </CardContent>
+      </Card>
 
-        <Card>
-          <CardContent className="p-6 text-center">
-            <div className="text-sm text-muted-foreground mb-2">Próxima Blind</div>
-            <div className="text-2xl font-bold">
-              {nextBlind ? `${nextBlind.smallBlind}/${nextBlind.bigBlind}` : 'Final'}
+      {/* Próxima Blind - Menor destaque */}
+      <Card className="w-full max-w-2xl">
+        <CardContent className="p-4 text-center">
+          <div className="text-sm text-muted-foreground mb-2">Próxima Blind</div>
+          <div className="text-xl font-bold">
+            {nextBlind ? `${nextBlind.smallBlind}/${nextBlind.bigBlind}` : 'Final'}
+          </div>
+          {nextBlind?.ante && (
+            <div className="text-lg text-orange-600 font-semibold mt-1">
+              Ante: {nextBlind.ante}
             </div>
-            {nextBlind?.ante && (
-              <div className="text-lg text-orange-600 font-semibold mt-1">
-                Ante: {nextBlind.ante}
-              </div>
-            )}
-            <div className="text-xs text-muted-foreground mt-1">
-              {nextBlind ? `${nextBlind.duration} min` : ''}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          )}
+          <div className="text-xs text-muted-foreground mt-1">
+            {nextBlind ? `${nextBlind.duration} min` : ''}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Controles do Timer */}
       <div className="flex flex-wrap justify-center gap-3">
