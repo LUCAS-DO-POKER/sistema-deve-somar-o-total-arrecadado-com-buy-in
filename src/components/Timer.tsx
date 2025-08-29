@@ -57,62 +57,69 @@ export function Timer() {
             )}
           </div>
 
-          {/* Seção de Premiação Integrada */}
-          {state.totalPrizePool > 0 && state.prizeStructure.length > 0 && (
-            <div className="border-2 border-yellow-400 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg p-4 mt-6">
-              <div className="flex items-center justify-center gap-2 mb-4">
-                <Trophy className="w-5 h-5 text-yellow-600" />
-                <h3 className="text-lg font-bold text-yellow-800 dark:text-yellow-200">
-                  Premiação
-                </h3>
-              </div>
-              
-              <div className="text-center mb-4">
-                <div className="text-xl font-bold text-green-600">
-                  Prize Pool: R$ {state.totalPrizePool.toFixed(2)}
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  {state.players.length} jogadores
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {state.prizeStructure
-                  .sort((a, b) => a.position - b.position)
-                  .slice(0, 4) // Mostrar apenas os 4 primeiros para não ocupar muito espaço
-                  .map((prize) => (
-                    <div 
-                      key={prize.position} 
-                      className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-yellow-500 text-white text-xs font-bold">
-                          {prize.position}
-                        </div>
-                        <span className="text-sm font-medium">
-                          {prize.position}{getPositionSuffix(prize.position)} Lugar
-                        </span>
-                      </div>
-                      
-                      <div className="text-right">
-                        <div className="text-sm font-bold text-green-600">
-                          R$ {calculatePrizeAmount(prize.percentage).toFixed(2)}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {prize.percentage}%
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-              
-              {state.prizeStructure.length > 4 && (
-                <div className="text-center mt-2 text-xs text-muted-foreground">
-                  +{state.prizeStructure.length - 4} posições premiadas
-                </div>
-              )}
+          {/* Seção de Premiação - SEMPRE VISÍVEL */}
+          <div className="border-2 border-yellow-400 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg p-4 mt-6">
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <Trophy className="w-5 h-5 text-yellow-600" />
+              <h3 className="text-lg font-bold text-yellow-800 dark:text-yellow-200">
+                Premiação
+              </h3>
             </div>
-          )}
+            
+            <div className="text-center mb-4">
+              <div className="text-xl font-bold text-green-600">
+                Prize Pool: R$ {state.totalPrizePool.toFixed(2)}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {state.players.length} jogadores
+              </div>
+            </div>
+            
+            {state.prizeStructure.length > 0 ? (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {state.prizeStructure
+                    .sort((a, b) => a.position - b.position)
+                    .slice(0, 4) // Mostrar apenas os 4 primeiros para não ocupar muito espaço
+                    .map((prize) => (
+                      <div 
+                        key={prize.position} 
+                        className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-yellow-500 text-white text-xs font-bold">
+                            {prize.position}
+                          </div>
+                          <span className="text-sm font-medium">
+                            {prize.position}{getPositionSuffix(prize.position)} Lugar
+                          </span>
+                        </div>
+                        
+                        <div className="text-right">
+                          <div className="text-sm font-bold text-green-600">
+                            R$ {calculatePrizeAmount(prize.percentage).toFixed(2)}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {prize.percentage}%
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+                
+                {state.prizeStructure.length > 4 && (
+                  <div className="text-center mt-2 text-xs text-muted-foreground">
+                    +{state.prizeStructure.length - 4} posições premiadas
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="text-center text-muted-foreground py-4">
+                <p className="text-sm">Estrutura de premiação não configurada</p>
+                <p className="text-xs mt-1">Configure na aba "Premiação"</p>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
