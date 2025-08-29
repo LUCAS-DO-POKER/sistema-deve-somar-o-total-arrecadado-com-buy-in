@@ -17,10 +17,10 @@ export default function Home() {
         <div className="container mx-auto p-4">
           <div className="mb-6">
             <h1 className="text-3xl font-bold text-center mb-2">
-              Controlador de Torneio de Poker
+              Poker do Lucão
             </h1>
             <p className="text-center text-muted-foreground">
-              Gerencie seu torneio de poker com facilidade
+              Todos os jogadores devem enviar 10 reais no pix do lucão pelo tempo envolvido na criação desse app
             </p>
           </div>
 
